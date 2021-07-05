@@ -32,12 +32,12 @@ from ocrmypdf.helpers import (
     monotonic,
     safe_symlink,
 )
+from ocrmypdf.hocrtransform import HOCR_OK_LANGS
 from ocrmypdf.subprocess import check_external_program
 
 # -------------
 # External dependencies
 
-HOCR_OK_LANGS = frozenset(['eng', 'deu', 'spa', 'ita', 'por'])
 DEFAULT_LANGUAGE = 'eng'  # Enforce English hegemony
 
 log = logging.getLogger(__name__)
@@ -279,7 +279,7 @@ def check_closed_streams(options):  # pragma: no cover
     Attempting to a fork/exec a new Python process when any of std{in,out,err}
     are closed or not flushable for some reason may raise an exception.
     Fix this by opening devnull if the handle seems to be closed.  Do this
-    globally to avoid tracking places all places that fork.
+    globally to avoid tracking all places that fork.
 
     Seems to be specific to multiprocessing.Process not all Python process
     forkers.
@@ -341,7 +341,17 @@ def create_input_file(options, work_folder: Path) -> Tuple[Path, str]:
             safe_symlink(options.input_file, target)
             return target, os.fspath(options.input_file)
         except FileNotFoundError:
-            raise InputFileError(f"File not found - {options.input_file}")
+            msg = f"File not found - {options.input_file}"
+            if Path('/.dockerenv').exists():  # pragma: no cover
+                msg += (
+                    "\nDocker cannot your working directory unless you "
+                    "explicitly share it with the Docker container and set up"
+                    "permissions correctly.\n"
+                    "You may find it easier to use stdin/stdout:"
+                    "\n"
+                    "\tdocker run -i --rm jbarlow83/ocrmypdf - - <input.pdf >output.pdf\n"
+                )
+            raise InputFileError(msg)
 
 
 def check_requested_output_file(options):

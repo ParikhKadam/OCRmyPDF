@@ -5,8 +5,20 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-"""Alternate executor to support OCRmyPDF in AWS Lambda"""
+"""Semaphore-free alternate executor.
 
+There are two popular environments that do not fully support the standard Python
+multiprocessing module: AWS Lambda, and Termux (a terminal emulator for Android).
+
+This alternate executor divvies up work among worker processes before processing,
+rather than having each worker consume work from a shared queue when they finish
+their task. This means workers have no need to coordinate with each other. Each
+worker communicates only with the main process.
+
+This is not without drawbacks. If the tasks are not "even" in size, which cannot
+be guaranteed, some workers may end up with too much work while others are idle.
+It is less efficient than the standard implementation, so not th edefault.
+"""
 
 import logging
 import logging.handlers
@@ -16,12 +28,12 @@ from enum import Enum, auto
 from itertools import islice, repeat, takewhile, zip_longest
 from multiprocessing import Pipe, Process
 from multiprocessing.connection import Connection, wait
-from typing import Callable, Iterable, Optional
-from unittest.mock import Mock
+from typing import Callable, Iterable, Iterator
 
 from ocrmypdf import Executor, hookimpl
 from ocrmypdf._concurrent import NullProgressBar
 from ocrmypdf.exceptions import InputFileError
+from ocrmypdf.helpers import remove_all_log_handlers
 
 
 class MessageType(Enum):
@@ -30,7 +42,14 @@ class MessageType(Enum):
     complete = auto()
 
 
-def split_every(n: int, iterable: Iterable):
+def split_every(n: int, iterable: Iterable) -> Iterator:
+    """Split iterable into groups of n.
+
+    >>> list(split_every(4, range(10)))
+    [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9]]
+
+    https://stackoverflow.com/a/22919323
+    """
     iterator = iter(iterable)
     return takewhile(bool, (list(islice(iterator, n)) for _ in repeat(None)))
 
@@ -61,8 +80,8 @@ def process_loop(
     # Reconfigure the root logger for this process to send all messages to a queue
     h = ConnectionLogHandler(conn)
     root = logging.getLogger()
+    remove_all_log_handlers(root)
     root.setLevel(loglevel)
-    root.handlers = []
     root.addHandler(h)
 
     user_init()
@@ -94,9 +113,10 @@ class LambdaExecutor(Executor):
         task_finished: Callable,
     ):
         if use_threads and max_workers == 1:
-            for args in task_arguments:
-                result = task(args)
-                task_finished(result, self.pbar_class)
+            with self.pbar_class(**tqdm_kwargs) as pbar:
+                for args in task_arguments:
+                    result = task(args)
+                    task_finished(result, pbar)
             return
 
         task_arguments = list(task_arguments)

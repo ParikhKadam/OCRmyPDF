@@ -21,17 +21,15 @@ from ocrmypdf._plugin_manager import get_plugin_manager
 from ocrmypdf.helpers import Resolution
 from ocrmypdf.pdfinfo import PdfInfo
 
-# pytest.helpers is dynamic
-# pylint: disable=no-member
-# pylint: disable=w0612
+from .conftest import check_ocrmypdf, run_ocrmypdf
+
+# pylintx: disable=unused-variable
+
 
 pytestmark = pytest.mark.skipif(
     leptonica.get_leptonica_version() < 'leptonica-1.72',
     reason="Leptonica is too old, correlation doesn't work",
 )
-
-check_ocrmypdf = pytest.helpers.check_ocrmypdf
-run_ocrmypdf = pytest.helpers.run_ocrmypdf
 
 
 RENDERERS = ['hocr', 'sandwich']
@@ -91,7 +89,7 @@ def test_monochrome_correlation(resources, outdir):
 def test_autorotate(renderer, resources, outdir):
     # cardinal.pdf contains four copies of an image rotated in each cardinal
     # direction - these ones are "burned in" not tagged with /Rotate
-    out = check_ocrmypdf(
+    check_ocrmypdf(
         resources / 'cardinal.pdf',
         outdir / 'out.pdf',
         '-r',
@@ -121,7 +119,7 @@ def test_autorotate(renderer, resources, outdir):
     ],
 )
 def test_autorotate_threshold(threshold, correlation_test, resources, outdir):
-    out = check_ocrmypdf(
+    check_ocrmypdf(
         resources / 'cardinal.pdf',
         outdir / 'out.pdf',
         '--rotate-pages-threshold',
@@ -133,14 +131,14 @@ def test_autorotate_threshold(threshold, correlation_test, resources, outdir):
         'tests/plugins/tesseract_cache.py',
     )
 
-    correlation = check_monochrome_correlation(
+    correlation = check_monochrome_correlation(  # pylint: disable=unused-variable
         outdir,
         reference_pdf=resources / 'cardinal.pdf',
         reference_pageno=1,
         test_pdf=outdir / 'out.pdf',
         test_pageno=3,
     )
-    assert eval(correlation_test)  # pylint: disable=w0123
+    assert eval(correlation_test)  # pylint: disable=eval-used
 
 
 def test_rotated_skew_timeout(resources, outpdf):

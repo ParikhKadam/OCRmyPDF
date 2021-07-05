@@ -15,7 +15,7 @@ from collections.abc import Iterable
 from contextlib import suppress
 from functools import wraps
 from io import StringIO
-from math import isclose
+from math import isclose, isfinite
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -39,6 +39,10 @@ class Resolution(namedtuple('Resolution', ('x', 'y'))):
     def is_square(self) -> bool:
         return isclose(self.x, self.y, rel_tol=1e-3)
 
+    @property
+    def is_finite(self) -> bool:
+        return isfinite(self.x) and isfinite(self.y)
+
     def take_max(self, vals, yvals=None):
         if yvals is not None:
             return Resolution(max(self.x, *vals), max(self.y, *yvals))
@@ -54,7 +58,7 @@ class Resolution(namedtuple('Resolution', ('x', 'y'))):
     def __str__(self):
         return f"{self.x:f}x{self.y:f}"
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return f"Resolution({self.x}x{self.y} dpi)"
 
 
@@ -87,10 +91,7 @@ def safe_symlink(input_file: os.PathLike, soft_link_name: os.PathLike):
         # do not delete or overwrite real (non-soft link) file
         if not os.path.islink(soft_link_name):
             raise FileExistsError(f"{soft_link_name} exists and is not a link")
-        try:
-            os.unlink(soft_link_name)
-        except OSError:
-            log.debug("Can't unlink %s", soft_link_name)
+        os.unlink(soft_link_name)
 
     if not os.path.exists(input_file):
         raise FileNotFoundError(f"trying to create a broken symlink to {input_file}")
@@ -203,7 +204,9 @@ def check_pdf(input_file: Path) -> bool:
                 pdf.check_linearization(sio)
             except RuntimeError:
                 pass
-            except (  # Workaround for a problematic pikepdf version
+            except (
+                # Workaround for a problematic pikepdf version
+                # pragma: no cover
                 getattr(pikepdf, 'ForeignObjectError')
                 if pikepdf.__version__ == '2.1.0'
                 else NeverRaise
@@ -224,6 +227,13 @@ def clamp(n, smallest, largest):  # mypy doesn't understand types for this
     return max(smallest, min(n, largest))
 
 
+def remove_all_log_handlers(logger):
+    "Remove all log handlers, usually used in a child process."
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+        handler.close()  # To ensure handlers with opened resources are released
+
+
 def pikepdf_enable_mmap():
     # try:
     #     if pikepdf._qpdf.set_access_default_mmap(True):
@@ -233,7 +243,7 @@ def pikepdf_enable_mmap():
     # We found a race condition probably related to pybind issue #2252 that can
     # cause a crash. For now, disable pikepdf mmap to be on the safe side.
     # Fix is not in pybind11 2.6.0
-    log.debug("pikepdf mmap disabled")
+    # log.debug("pikepdf mmap disabled")
     return
 
 

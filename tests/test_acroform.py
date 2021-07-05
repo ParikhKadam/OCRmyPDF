@@ -11,7 +11,9 @@ import pytest
 
 import ocrmypdf
 
-check_ocrmypdf = pytest.helpers.check_ocrmypdf
+from .conftest import check_ocrmypdf
+
+# pylint: disable=redefined-outer-name
 
 
 @pytest.fixture

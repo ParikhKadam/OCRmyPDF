@@ -13,7 +13,7 @@ from contextlib import suppress
 from datetime import datetime, timezone
 from pathlib import Path
 from shutil import copyfileobj
-from typing import BinaryIO, Dict, Iterable, Optional, Union, cast
+from typing import Dict, Iterable, Optional
 
 import img2pdf
 import pikepdf
@@ -162,10 +162,10 @@ def get_pdfinfo(
             check_pages=check_pages,
             executor=executor,
         )
-    except pikepdf.PasswordError:
-        raise EncryptedPdfError()
-    except pikepdf.PdfError:
-        raise InputFileError()
+    except pikepdf.PasswordError as e:
+        raise EncryptedPdfError() from e
+    except pikepdf.PdfError as e:
+        raise InputFileError() from e
 
 
 def validate_pdfinfo_options(context: PdfContext):
@@ -686,11 +686,6 @@ def get_docinfo(base_pdf: pikepdf.Pdf, context: PdfContext) -> Dict[str, str]:
 
     pdfmark['/Creator'] = f'{PROGRAM_NAME} {VERSION} / {creator_tag}'
     pdfmark['/Producer'] = f'pikepdf {pikepdf.__version__}'
-    if 'OCRMYPDF_CREATOR' in os.environ:
-        pdfmark['/Creator'] = os.environ['OCRMYPDF_CREATOR']
-    if 'OCRMYPDF_PRODUCER' in os.environ:
-        pdfmark['/Producer'] = os.environ['OCRMYPDF_PRODUCER']
-
     pdfmark['/ModDate'] = encode_pdf_date(datetime.now(timezone.utc))
     return pdfmark
 
@@ -839,7 +834,7 @@ def optimize_pdf(input_file: Path, context: PdfContext, executor: Executor):
 
 
 def enumerate_compress_ranges(iterable):
-    skipped_from = None
+    skipped_from, index = None, None
     for index, txt_file in enumerate(iterable):
         index += 1
         if txt_file:

@@ -14,7 +14,7 @@ from contextlib import ExitStack
 from decimal import Decimal
 from enum import Enum
 from functools import partial
-from math import hypot, isclose
+from math import hypot, inf, isclose
 from os import PathLike
 from pathlib import Path
 from typing import Container, Iterator, Optional, Tuple, Union
@@ -256,17 +256,15 @@ def _get_dpi(ctm_shorthand, image_size) -> Resolution:
     a, b, c, d, _, _ = ctm_shorthand
 
     # Calculate the width and height of the image in PDF units
-    image_drawn_width = hypot(a, b)
-    image_drawn_height = hypot(c, d)
+    image_drawn = hypot(a, b), hypot(c, d)
 
-    # The scale of the image is pixels per unit of default user space (1/72")
-    scale_w = image_size[0] / image_drawn_width
-    scale_h = image_size[1] / image_drawn_height
+    def calc(drawn, pixels, inches_per_pt=72.0):
+        # The scale of the image is pixels per unit of default user space (1/72")
+        scale = pixels / drawn if drawn != 0 else inf
+        dpi = scale * inches_per_pt
+        return dpi
 
-    # DPI = scale * 72
-    dpi_w = scale_w * 72.0
-    dpi_h = scale_h * 72.0
-
+    dpi_w, dpi_h = (calc(image_drawn[n], image_size[n]) for n in range(2))
     return Resolution(dpi_w, dpi_h)
 
 
@@ -364,6 +362,10 @@ class ImageInfo:
     @property
     def enc(self):
         return self._enc
+
+    @property
+    def renderable(self):
+        return self.dpi.is_finite and self.width >= 0 and self.height >= 0
 
     @property
     def dpi(self):
@@ -734,7 +736,9 @@ class PageInfo:
 
         self._dpi = None
         if self._images:
-            dpi = Resolution(0.0, 0.0).take_max(image.dpi for image in self._images)
+            dpi = Resolution(0.0, 0.0).take_max(
+                image.dpi for image in self._images if image.renderable
+            )
             self._dpi = dpi
             self._width_pixels = int(round(dpi.x * float(self._width_inches)))
             self._height_pixels = int(round(dpi.y * float(self._height_inches)))

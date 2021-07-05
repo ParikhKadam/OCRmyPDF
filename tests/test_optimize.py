@@ -19,7 +19,7 @@ from ocrmypdf._exec import jbig2enc, pngquant
 from ocrmypdf._exec.ghostscript import rasterize_pdf
 from ocrmypdf.helpers import Resolution
 
-check_ocrmypdf = pytest.helpers.check_ocrmypdf  # pylint: disable=e1101
+from .conftest import check_ocrmypdf
 
 needs_pngquant = pytest.mark.skipif(
     not pngquant.available(), reason="pngquant not installed"
@@ -143,7 +143,7 @@ def test_multiple_pngs(resources, outdir):
             outputstream=inpdf,
         )
 
-    def mockquant(input_file, output_file, *args):
+    def mockquant(input_file, output_file, *_args):
         with Image.open(input_file) as im:
             draw = ImageDraw.Draw(im)
             draw.rectangle((0, 0, im.width, im.height), fill=128)

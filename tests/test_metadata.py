@@ -6,7 +6,6 @@
 
 
 import datetime
-import mmap
 from datetime import timezone
 from os import fspath
 from shutil import copyfile
@@ -24,18 +23,15 @@ from ocrmypdf.exceptions import ExitCode
 from ocrmypdf.pdfa import SRGB_ICC_PROFILE, file_claims_pdfa, generate_pdfa_ps
 from ocrmypdf.pdfinfo import PdfInfo
 
+from .conftest import check_ocrmypdf, run_ocrmypdf
+
 try:
     import fitz
 except ImportError:
     fitz = None
 
-# pytest.helpers is dynamic
-# pylint: disable=no-member
 
 pytestmark = pytest.mark.filterwarnings('ignore:.*XMLParser.*:DeprecationWarning')
-
-check_ocrmypdf = pytest.helpers.check_ocrmypdf
-run_ocrmypdf = pytest.helpers.run_ocrmypdf
 
 
 @pytest.mark.parametrize("output_type", ['pdfa', 'pdf'])
@@ -359,17 +355,16 @@ def test_prevent_gs_invalid_xml(resources, outdir):
         str(outdir / 'layers.rendered.pdf'), str(outdir / 'pdfa.ps'), context
     )
 
-    with open(outdir / 'pdfa.pdf', 'r+b') as f:
-        with mmap.mmap(f.fileno(), 0) as mm:
-            # Since the XML may be invalid, we scan instead of actually feeding it
-            # to a parser.
-            XMP_MAGIC = b'W5M0MpCehiHzreSzNTczkc9d'
-            xmp_start = mm.find(XMP_MAGIC)
-            xmp_end = mm.rfind(b'<?xpacket end', xmp_start)
-            assert 0 < xmp_start < xmp_end
-            # Ensure we did not carry the nul forward.
-            assert mm.find(b'&#0;', xmp_start, xmp_end) == -1, "found escaped nul"
-            assert mm.find(b'\x00', xmp_start, xmp_end) == -1
+    contents = (outdir / 'pdfa.pdf').read_bytes()
+    # Since the XML may be invalid, we scan instead of actually feeding it
+    # to a parser.
+    XMP_MAGIC = b'W5M0MpCehiHzreSzNTczkc9d'
+    xmp_start = contents.find(XMP_MAGIC)
+    xmp_end = contents.rfind(b'<?xpacket end', xmp_start)
+    assert 0 < xmp_start < xmp_end
+    # Ensure we did not carry the nul forward.
+    assert contents.find(b'&#0;', xmp_start, xmp_end) == -1, "found escaped nul"
+    assert contents.find(b'\x00', xmp_start, xmp_end) == -1
 
 
 def test_malformed_docinfo(caplog, resources, outdir):

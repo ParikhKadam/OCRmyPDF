@@ -139,7 +139,7 @@ Limitations
 OCRmyPDF is limited by the Tesseract OCR engine. As such it experiences
 these limitations, as do any other programs that rely on Tesseract:
 
--  The OCR is not as accurate as commercial solutions such as Abbyy.
+-  The OCR is not as accurate as commercial OCR solutions.
 -  It is not capable of recognizing handwriting.
 -  It may find gibberish and report this as OCR output.
 -  If a document contains languages outside of those given in the
@@ -207,8 +207,9 @@ consider one of these similar open source programs:
 
 -  pdf2pdfocr
 -  pdfsandwich
--  pypdfocr
--  pdfbeads
+
+Ghostscript recently added three "pdfocr" output devices. They work by
+rasterizing all content and converting all pages to a single colour space.
 
 Web front-ends
 ==============

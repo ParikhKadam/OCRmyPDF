@@ -6,6 +6,8 @@ on:
       - master
       - ci
       - release/*
+    tags:
+      - v*
     paths-ignore:
       - README*
   pull_request:
@@ -65,7 +67,7 @@ jobs:
 
       - name: Install Python packages
         run: |
-          python -m pip install -r requirements/main.txt -r requirements/test.txt .
+          python -m pip install .[test]
 
       - name: Report versions
         run: |
@@ -122,7 +124,7 @@ jobs:
       - name: Install Python packages
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements/main.txt -r requirements/test.txt .
+          python -m pip install .[test]
 
       - name: Report versions
         run: |
@@ -172,7 +174,7 @@ jobs:
       - name: Install Python packages
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements/main.txt -r requirements/test.txt .
+          python -m pip install .[test]
 
       - name: Test
         run: |

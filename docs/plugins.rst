@@ -61,9 +61,10 @@ similar to ``pytest`` packages such as ``pytest-cov`` (the package) and
 
 .. note::
 
-    We strongly recommend plugin authors name their plugins with the prefix
+    We recommend plugin authors name their plugins with the prefix
     ``ocrmypdf-`` (for the package name on PyPI) and ``ocrmypdf_`` (for the
-    module), just like pytest plugins.
+    module), just like pytest plugins. At the same time, please make it clear
+    that your package is not official.
 
 Setuptools plugins
 ==================
@@ -85,6 +86,13 @@ named ``ocrmypdf-exampleplugin``:
         # the following makes a plugin available to pytest
         entry_points={"ocrmypdf": ["exampleplugin = exampleplugin.pluginmodule"]},
     )
+
+.. code-block:: ini
+
+    # equivalent setup.cfg
+    [options.entry_points]
+    ocrmypdf =
+        exampleplugin = exampleplugin.pluginmodule
 
 Plugin requirements
 ===================
@@ -179,6 +187,8 @@ Modifying intermediate images
 .. autofunction:: ocrmypdf.pluginspec.filter_ocr_image
 
 .. autofunction:: ocrmypdf.pluginspec.filter_page_image
+
+.. autofunction:: ocrmypdf.pluginspec.filter_pdf_page
 
 OCR engine
 ----------

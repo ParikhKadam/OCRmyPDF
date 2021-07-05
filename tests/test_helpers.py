@@ -12,7 +12,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ocrmypdf import helpers as helpers
+from ocrmypdf import helpers
+
+from .conftest import running_in_docker
 
 
 class TestSafeSymlink:
@@ -58,9 +60,7 @@ def test_deprecated():
         assert old_function() == 42
 
 
-skipif_docker = pytest.mark.skipif(
-    pytest.helpers.running_in_docker(), reason="fails on Docker"
-)
+skipif_docker = pytest.mark.skipif(running_in_docker(), reason="fails on Docker")
 
 
 class TestFileIsWritable:
@@ -100,6 +100,7 @@ class TestFileIsWritable:
 
 @pytest.mark.skipif(os.name != 'nt', reason="Windows test")
 def test_shim_paths(tmp_path):
+    # pylint: disable=import-outside-toplevel
     from ocrmypdf.subprocess._windows import shim_env_path
 
     progfiles = tmp_path / 'Program Files'
@@ -116,3 +117,14 @@ def test_shim_paths(tmp_path):
     assert results[-3].endswith('tesseract-ocr'), results
     assert results[-2].endswith(os.path.join('gs', '9.52', 'bin')), results
     assert results[-1].endswith(os.path.join('gs', '9.51', 'bin')), results
+
+
+def test_resolution():
+    Resolution = helpers.Resolution
+    dpi_100 = Resolution(100, 100)
+    dpi_200 = Resolution(200, 200)
+    assert dpi_100.is_square
+    assert not Resolution(100, 200).is_square
+    assert dpi_100 == Resolution(100, 100)
+    assert str(dpi_100) != str(dpi_200)
+    assert dpi_100.take_max([200, 300], [400]) == Resolution(300, 400)

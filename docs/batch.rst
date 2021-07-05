@@ -111,7 +111,7 @@ Users may need to customize the script to meet their requirements.
 
 .. code-block:: bash
 
-    pip3 install -r requirements/watcher.txt
+    pip3 install ocrmypdf[watcher]
 
     env OCR_INPUT_DIRECTORY=/mnt/input-pdfs \
         OCR_OUTPUT_DIRECTORY=/mnt/output-pdfs \
@@ -201,13 +201,6 @@ Alternatives
 
 -  `Watchman <https://facebook.github.io/watchman/>`__ is a more
    powerful alternative to ``watchmedo``.
-
-AWS Lambda is not viable
-------------------------
-
-AWS Lambda and its equivalents have low limits on execution time and payload
-size, relative to OCRmyPDF's needs. As of this writing, the request/response
-payload for AWS Lambda was 6 MB, which means many PDFs will not fit.
 
 macOS Automator
 ===============

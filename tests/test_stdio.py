@@ -15,11 +15,7 @@ import pytest
 from ocrmypdf.exceptions import ExitCode
 from ocrmypdf.helpers import check_pdf
 
-# pytest.helpers is dynamic
-# pylint: disable=no-member,redefined-outer-name
-
-run_ocrmypdf = pytest.helpers.run_ocrmypdf
-run_ocrmypdf_api = pytest.helpers.run_ocrmypdf
+from .conftest import run_ocrmypdf
 
 
 def test_stdin(ocrmypdf_exec, resources, outpdf):
@@ -34,8 +30,7 @@ def test_stdin(ocrmypdf_exec, resources, outpdf):
             '--plugin',
             'tests/plugins/tesseract_noop.py',
         ]
-        p = run(p_args, stdout=PIPE, stderr=PIPE, stdin=input_stream)
-        assert p.returncode == ExitCode.ok
+        run(p_args, stdout=PIPE, stderr=PIPE, stdin=input_stream, check=True)
 
 
 def test_stdout(ocrmypdf_exec, resources, outpdf):
@@ -53,8 +48,7 @@ def test_stdout(ocrmypdf_exec, resources, outpdf):
             '--plugin',
             'tests/plugins/tesseract_noop.py',
         ]
-        p = run(p_args, stdout=output_stream, stderr=PIPE, stdin=DEVNULL)
-        assert p.returncode == ExitCode.ok
+        run(p_args, stdout=output_stream, stderr=PIPE, stdin=DEVNULL, check=True)
 
     assert check_pdf(output_file)
 

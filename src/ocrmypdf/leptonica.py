@@ -88,9 +88,9 @@ except ffi.error as e:
 
 class _LeptonicaErrorTrap_Redirect:
     """
-    Context manager to trap errors reported by Leptonica.
+    Context manager to trap errors reported by Leptonica < 1.79 or on Apple Silicon.
 
-    Leptonica's error return codes don't provide much informatino about what
+    Leptonica's error return codes don't provide much information about what
     went wrong. Leptonica does, however, write more detailed errors to stderr
     (provided this is not disabled at compile time). The Leptonica source
     code is very consistent in its use of macros to generate errors.
@@ -114,8 +114,10 @@ class _LeptonicaErrorTrap_Redirect:
         # Save the old stderr, and redirect stderr to temporary file
         self.leptonica_lock.acquire()
         try:
-            with suppress(AttributeError):
-                sys.stderr.flush()
+            # It would make sense to do sys.stderr.flush() here, but that can deadlock
+            # due to https://bugs.python.org/issue6721. So don't flush. Pretend
+            # there's nothing important in sys.stderr. If the user cared they would
+            # be using Leptonica 1.79 or later anyway to avoid this mess.
             self.copy_of_stderr = os.dup(sys.stderr.fileno())
             os.dup2(self.tmpfile.fileno(), sys.stderr.fileno(), inheritable=False)
         except AttributeError:
@@ -190,11 +192,17 @@ class _LeptonicaErrorTrap_Queue:
         if 'Error' in output:
             if 'image file not found' in output:
                 raise FileNotFoundError()
-            if 'pixWrite: stream not opened' in output:
+            elif 'pixWrite: stream not opened' in output:
                 raise LeptonicaIOError()
-            if 'index not valid' in output:
+            elif 'index not valid' in output:
                 raise IndexError()
-            raise LeptonicaError(output)
+            elif 'pixGetInvBackgroundMap: w and h must be >= 5' in output:
+                logger.warning(
+                    "Leptonica attempted to remove background from a low resolution - "
+                    "you may want to review in a PDF viewer"
+                )
+            else:
+                raise LeptonicaError(output)
         return False
 
 
@@ -654,6 +662,9 @@ class Pix(LeptonicaObject):
         bg_val=200,
         smooth_kernel=(2, 1),
     ):
+        if self.width < tile_size[0] or self.height < tile_size[1]:
+            logger.info("Skipped pixMaskedThreshOnBackgroundNorm on small image")
+            return self
         # Background norm doesn't work on color mapped Pix, so remove colormap
         target_pix = self.remove_colormap(lept.REMOVE_CMAP_BASED_ON_SRC)
         with _LeptonicaErrorTrap():

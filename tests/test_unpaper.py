@@ -14,13 +14,9 @@ from ocrmypdf._plugin_manager import get_parser_options_plugins
 from ocrmypdf._validation import check_options
 from ocrmypdf.exceptions import ExitCode, MissingDependencyError
 
-# pytest.helpers is dynamic
-# pylint: disable=no-member,redefined-outer-name
-# pylint: disable=w0612
+from .conftest import check_ocrmypdf, have_unpaper, run_ocrmypdf
 
-check_ocrmypdf = pytest.helpers.check_ocrmypdf
-run_ocrmypdf = pytest.helpers.run_ocrmypdf
-have_unpaper = pytest.helpers.have_unpaper
+# pylint: disable=redefined-outer-name
 
 
 def test_no_unpaper(resources, no_outpdf):
@@ -75,7 +71,7 @@ def test_unpaper_args_valid(resources, outpdf):
 
 @pytest.mark.skipif(not have_unpaper(), reason="requires unpaper")
 def test_unpaper_args_invalid_filename(resources, outpdf):
-    p, out, err = run_ocrmypdf(
+    p, _out, err = run_ocrmypdf(
         resources / "skew.pdf",
         outpdf,
         "-c",
@@ -90,7 +86,7 @@ def test_unpaper_args_invalid_filename(resources, outpdf):
 
 @pytest.mark.skipif(not have_unpaper(), reason="requires unpaper")
 def test_unpaper_args_invalid(resources, outpdf):
-    p, out, err = run_ocrmypdf(
+    p, _out, _err = run_ocrmypdf(
         resources / "skew.pdf",
         outpdf,
         "-c",
